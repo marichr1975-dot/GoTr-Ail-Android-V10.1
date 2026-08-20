@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -11,7 +11,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // SOSTITUISCI QUESTA STRINGA CON LA TUA CHIAVE REALE DI GEMINI
-  final String _geminiApiKey =AQ.Ab8RN6KT-mwqeTbPMvuhLUBkJjMe-Jlc2OrK7DFLzyVVsGny1Q;
+  final String _geminiApiKey = const String.fromEnvironment('GEMINI_API_KEY');
   
   bool _isLoading = false;
   String _statoAnalisi = '';
@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      LocationPermission permission = await Geolocator.requestPermission();
+      await Geolocator.requestPermission();
       Position pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high
       );
@@ -82,8 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
       Crea un percorso escursionistico partendo dalle coordinate: Lat ${pos.latitude}, Lon ${pos.longitude}.
       Parametri utente:
       - Distanza desiderata: circa $_kmSelezionati km
-      - Adatto a cani: ${_conCani ? "SÌ (evita zone esposte/ferrate)" : "NO"}
-      - Adatto a bambini: ${_conBambini ? "SÌ (basso dislivello)" : "NO"}
+      - Adatto a cani: ${_conCani ? "SÃŒ (evita zone esposte/ferrate)" : "NO"}
+      - Adatto a bambini: ${_conBambini ? "SÃŒ (basso dislivello)" : "NO"}
 
       Fornisci una descrizione dettagliata del percorso, compresi il tempo di percorrenza stimato e il dislivello.
       ''';
@@ -241,3 +241,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+
