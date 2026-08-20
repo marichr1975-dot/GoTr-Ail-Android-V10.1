@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart' hide Theme;
 import 'package:flutter_map/flutter_map.dart';
@@ -43,7 +43,7 @@ class _PlanningMapScreenState extends State<PlanningMapScreen> {
 
   Future<void> _prepare() async {
     // 8.8: niente aggiornamenti/download automatici all'apertura di Pianifica.
-    // Una MBTiles giÃ  presente (anche copiata via PowerShell) ha prioritÃ .
+    // Una MBTiles già presente (anche copiata via PowerShell) ha priorità.
     if (mounted) setState(() => _preparing = false);
   }
 
@@ -84,7 +84,7 @@ class _PlanningMapScreenState extends State<PlanningMapScreen> {
             duration: const Duration(seconds: 6),
             content: Text(
               'Per ${found.label} non trovo una mappa .mwm disponibile sul server. '
-              'GoTr-Ail non userÃ  nÃ© scaricherÃ  le vecchie mappe.',
+              'GoTr-Ail non userà né scaricherà le vecchie mappe.',
             ),
           ),
         );
@@ -189,7 +189,7 @@ class _PlanningMapScreenState extends State<PlanningMapScreen> {
             }
           },
 
-          // LocalitÃ : finalmente nomi visibili sulla cartografia.
+          // Località: finalmente nomi visibili sulla cartografia.
           {
             'id': 'place-labels',
             'type': 'symbol',
@@ -227,7 +227,7 @@ class _PlanningMapScreenState extends State<PlanningMapScreen> {
             'paint': {'text-color': '#3f3934', 'text-halo-color': '#fffdf7', 'text-halo-width': 1.5}
           },
 
-          // POI utili a GoTr-Ail. Usiamo simboli geometrici + testo, cosÃ¬ sono offline
+          // POI utili a GoTr-Ail. Usiamo simboli geometrici + testo, così sono offline
           // e non dipendono da sprite esterni.
           {'id': 'hut-dot', 'type': 'circle', 'source': 'openmaptiles', 'source-layer': 'poi', 'minzoom': 12, 'filter': ['in', 'subclass', 'alpine_hut', 'wilderness_hut'], 'paint': {'circle-radius': 5.2, 'circle-color': '#2f7d32', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5}},
           {'id': 'hut-name', 'type': 'symbol', 'source': 'openmaptiles', 'source-layer': 'poi', 'minzoom': 12, 'filter': ['in', 'subclass', 'alpine_hut', 'wilderness_hut'], 'layout': {'text-field': '{name:latin}', 'text-size': 11, 'text-offset': [0, 1.2], 'text-allow-overlap': false}, 'paint': {'text-color': '#155a1b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5}},
@@ -308,7 +308,7 @@ class _PlanningMapScreenState extends State<PlanningMapScreen> {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Cerca una localitÃ . GoTr-AI individua automaticamente la mappa disponibile per quelle coordinate e, se serve, la scarica per lâ€™uso offline.',
+                            'Cerca una località. GoTr-AI individua automaticamente la mappa disponibile per quelle coordinate e, se serve, la scarica per lâ€™uso offline.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 14, height: 1.35),
                           ),

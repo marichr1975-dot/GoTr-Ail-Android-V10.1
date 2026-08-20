@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'saved_routes_screen.dart';
 import '../services/gps_service.dart';
@@ -71,7 +71,7 @@ class HomeScreen extends StatelessWidget {
           ),
           content: Text(
             '${mwm.regionLabel}\n\n'
-            'La mappa della zona Ã¨ giÃ  disponibile offline.',
+            'La mappa della zona è già disponibile offline.',
             style: const TextStyle(
               fontWeight: FontWeight.w600,
               height: 1.35,
@@ -158,7 +158,23 @@ class HomeScreen extends StatelessWidget {
                                   Text('GoTr-Ail', style: TextStyle(color: Colors.white, fontSize: compact ? 27 : 30, height: 1, fontWeight: FontWeight.w900, letterSpacing: -.8)),
                                   const SizedBox(height: 4),
                                   Text('Il tuo accompagnatore nei sentieri', style: TextStyle(color: const Color(0xFFEAF4FF), fontSize: compact ? 11.5 : 13, fontWeight: FontWeight.w700)),
-                                ],
+                                  const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black38,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white54),
+                              ),
+                              child: Text(
+                                'V10.1',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: compact ? 11 : 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),                          ],
                               ),
                             ),
                           ],
