@@ -23,10 +23,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Flutter 3.24.5
+      - name: Setup Flutter 3.44.8
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.44.8'
           channel: stable
           cache: true
 
