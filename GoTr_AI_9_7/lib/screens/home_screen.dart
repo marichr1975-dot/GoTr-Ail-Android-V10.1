@@ -11,7 +11,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // SOSTITUISCI QUESTA STRINGA CON LA TUA CHIAVE REALE DI GEMINI
-  final String _geminiApiKey = 'INSERISCI_QUI_LA_TUA_API_KEY';
+  final String _geminiApiKey =AQ.Ab8RN6KT-mwqeTbPMvuhLUBkJjMe-Jlc2OrK7DFLzyVVsGny1Q;
   
   bool _isLoading = false;
   String _statoAnalisi = '';
