@@ -1,280 +1,243 @@
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:geolocator/geolocator.dart';
 
-import 'saved_routes_screen.dart';
-import '../services/gps_service.dart';
-import '../services/mwm_map_service.dart';
-import 'planning_map_screen.dart';
-import 'mwm_download_progress_dialog.dart';
-import 'v8_choice_screen.dart';
-
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  static const _blue = Color(0xFF0B5FD7);
-  static const _green = Color(0xFF20A85A);
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-  void _open(BuildContext context, Widget page) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
-  }
+class _HomeScreenState extends State<HomeScreen> {
+  // SOSTITUISCI QUESTA STRINGA CON LA TUA CHIAVE REALE DI GEMINI
+  final String _geminiApiKey = 'INSERISCI_QUI_LA_TUA_API_KEY';
+  
+  bool _isLoading = false;
+  String _statoAnalisi = '';
+  
+  int _kmSelezionati = 4;
+  bool _conCani = false;
+  bool _conBambini = false;
 
-  Future<void> _startFromGps(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.6)),
-            SizedBox(width: 16),
-            Expanded(child: Text('Cerco la tua posizione GPSâ€¦', style: TextStyle(fontWeight: FontWeight.w700))),
-          ],
-        ),
-      ),
-    );
+  Future<void> _avviaAnalisiZona() async {
+    setState(() {
+      _isLoading = true;
+      _statoAnalisi = 'Rilevamento GPS...';
+    });
 
     try {
-      final point = await GpsService.currentPosition();
-      final mwm = await MwmDownloadProgressDialog.ensureForPoint(context, point);
-      if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-
-      if (mwm == null) {
-        final path = await MwmMapService.instance.installPath();
-        messenger.showSnackBar(SnackBar(
-          duration: const Duration(seconds: 7),
-          content: Text('GPS OK, ma non trovo una mappa disponibile sul server per questa zona. Cartella locale: $path'),
-        ));
-        return;
-      }
-
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: Color(0xFF20A85A)),
-              SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  'Mappa pronta',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 25,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            '${mwm.regionLabel}\n\n'
-            'La mappa della zona è già disponibile offline.',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              height: 1.35,
-            ),
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('CONTINUA'),
-            ),
-          ],
-        ),
+      LocationPermission permission = await Geolocator.requestPermission();
+      Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high
       );
-      if (!context.mounted) return;
-      _open(context, const V8ChoiceScreen(mode: V8Mode.start));
+
+      setState(() {
+        _statoAnalisi = 'Scansione 10 km con Gemini...';
+      });
+
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: _geminiApiKey);
+      final prompt = '''
+      Posizione GPS utente: Lat ${pos.latitude}, Lon ${pos.longitude}.
+      Analizza la zona montana nel raggio di 10 km da queste coordinate.
+      Fai un elenco sintetico dei Punti di Interesse trovati:
+      - Parcheggi principali
+      - Fontane / Punti acqua
+      - Rifugi / Punti ristoro
+      - Sentieri principali e punti panoramici
+      ''';
+
+      final response = await model.generateContent([Content.text(prompt)]);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      _mostraDialogRisultati(
+        titolo: 'Panoramica Zona (10 km)',
+        testo: response.text ?? 'Nessun dato trovato.',
+        mostraFiltri: true,
+        pos: pos,
+      );
+
     } catch (e) {
-      if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore durante la scansione: $e')),
+      );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final exit = await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: const Text('Uscire da GoTr-AI?', style: TextStyle(fontWeight: FontWeight.w900)),
-            content: const Text('Vuoi chiudere lâ€™app?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('NO')),
-              FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('ESCI')),
-            ],
-          ),
-        );
-        if (exit == true && context.mounted) Navigator.of(context).pop();
-      },
-      child: Scaffold(
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset('assets/images/monte_pelmo.png', fit: BoxFit.cover),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x33000A17), Color(0x44000A17), Color(0xE6081826)],
-                  stops: [0, .48, 1],
-                ),
-              ),
-            ),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxHeight < 660;
-                  return Padding(
-                    padding: EdgeInsets.fromLTRB(18, compact ? 12 : 18, 18, compact ? 12 : 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: compact ? 46 : 52,
-                              height: compact ? 46 : 52,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: .96),
-                                borderRadius: BorderRadius.circular(17),
-                                boxShadow: const [BoxShadow(color: Color(0x2A000000), blurRadius: 16, offset: Offset(0, 6))],
-                              ),
-                              child: const Icon(Icons.terrain_rounded, color: _blue, size: 30),
-                            ),
-                            const SizedBox(width: 11),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('GoTr-Ail', style: TextStyle(color: Colors.white, fontSize: compact ? 27 : 30, height: 1, fontWeight: FontWeight.w900, letterSpacing: -.8)),
-                                  const SizedBox(height: 4),
-                                  Text('Il tuo accompagnatore nei sentieri', style: TextStyle(color: const Color(0xFFEAF4FF), fontSize: compact ? 11.5 : 13, fontWeight: FontWeight.w700)),
-                                  const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black38,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white54),
-                              ),
-                              child: Text(
-                                'V10.1',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: compact ? 11 : 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),                          ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        _HomeAction(
-                          icon: Icons.hiking_rounded,
-                          title: 'Inizia',
-                          color: _green,
-                          compact: compact,
-                          onTap: () => _startFromGps(context),
-                        ),
-                        SizedBox(height: compact ? 9 : 11),
-                        _HomeAction(
-                          icon: Icons.auto_awesome_rounded,
-                          title: 'Pianifica',
-                          color: _blue,
-                          compact: compact,
-                          onTap: () => _open(context, const PlanningMapScreen()),
-                        ),
-                        SizedBox(height: compact ? 9 : 11),
-                        _HomeAction(
-                          icon: Icons.bookmark_rounded,
-                          title: 'Salvati',
-                          color: Colors.white,
-                          darkText: true,
-                          compact: compact,
-                          onTap: () => _open(context, const SavedRoutesScreen()),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _generaPercorsoSuMisura(Position pos) async {
+    setState(() {
+      _isLoading = true;
+      _statoAnalisi = 'Creazione del sentiero su misura...';
+    });
+
+    try {
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: _geminiApiKey);
+      final prompt = '''
+      Crea un percorso escursionistico partendo dalle coordinate: Lat ${pos.latitude}, Lon ${pos.longitude}.
+      Parametri utente:
+      - Distanza desiderata: circa $_kmSelezionati km
+      - Adatto a cani: ${_conCani ? "SÌ (evita zone esposte/ferrate)" : "NO"}
+      - Adatto a bambini: ${_conBambini ? "SÌ (basso dislivello)" : "NO"}
+
+      Fornisci una descrizione dettagliata del percorso, compresi il tempo di percorrenza stimato e il dislivello.
+      ''';
+
+      final response = await model.generateContent([Content.text(prompt)]);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      _mostraDialogRisultati(
+        titolo: 'Percorso Consigliato ($_kmSelezionati km)',
+        testo: response.text ?? 'Impossibile generare il percorso.',
+        mostraFiltri: false,
+        pos: pos,
+      );
+
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
-class _HomeAction extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color color;
-  final bool compact;
-  final bool darkText;
-  final VoidCallback onTap;
-
-  const _HomeAction({
-    required this.icon,
-    required this.title,
-    required this.color,
-    required this.compact,
-    required this.onTap,
-    this.darkText = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = darkText ? const Color(0xFF0B5FD7) : Colors.white;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Ink(
-          height: compact ? 68 : 78,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: darkText ? [Colors.white, const Color(0xFFF3F6FA)] : [color, Color.lerp(color, Colors.black, .18)!]),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: .14)),
-            boxShadow: [BoxShadow(color: (darkText ? Colors.black : color).withValues(alpha: darkText ? .16 : .30), blurRadius: 18, offset: const Offset(0, 7))],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: compact ? 45 : 52,
-                height: compact ? 45 : 52,
-                decoration: BoxDecoration(color: darkText ? const Color(0xFFF0F3F7) : Colors.white.withValues(alpha: .16), borderRadius: BorderRadius.circular(17)),
-                child: Icon(icon, color: fg, size: compact ? 25 : 29),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
+  void _mostraDialogRisultati({
+    required String titolo, 
+    required String testo, 
+    required bool mostraFiltri,
+    required Position pos
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              height: MediaQuery.of(context).size.height * 0.75,
+              child: SingleChildScrollView(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(color: fg, fontSize: compact ? 21 : 24, fontWeight: FontWeight.w900, height: 1)),
+                    Text(titolo, style: Theme.of(context).textTheme.headlineMedium),
+                    const SizedBox(height: 10),
+                    Text(testo, style: Theme.of(context).textTheme.bodyLarge),
+                    const Divider(height: 30),
+                    
+                    if (mostraFiltri) ...[
+                      Text("Personalizza la tua camminata:", style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 10),
+                      
+                      Row(
+                        children: [2, 4, 6].map((km) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ChoiceChip(
+                              label: Text('$km km'),
+                              selected: _kmSelezionati == km,
+                              onSelected: (selected) {
+                                setModalState(() => _kmSelezionati = km);
+                                setState(() => _kmSelezionati = km);
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      
+                      CheckboxListTile(
+                        title: const Text("Insieme a cani"),
+                        value: _conCani,
+                        onChanged: (val) {
+                          setModalState(() => _conCani = val ?? false);
+                          setState(() => _conCani = val ?? false);
+                        },
+                      ),
+                      CheckboxListTile(
+                        title: const Text("Adatto a bambini"),
+                        value: _conBambini,
+                        onChanged: (val) {
+                          setModalState(() => _conBambini = val ?? false);
+                          setState(() => _conBambini = val ?? false);
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.secondary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                        icon: const Icon(Icons.directions_walk),
+                        label: const Text("Crea Sentiero Perfetto"),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _generaPercorsoSuMisura(pos);
+                        },
+                      )
+                    ]
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_rounded, color: fg, size: 25),
-            ],
-          ),
-        ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('GoTr-AI'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: Colors.amber, size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  'v10.1',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+      body: Center(
+        child: _isLoading
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 15),
+                  Text(_statoAnalisi, style: Theme.of(context).textTheme.bodyLarge),
+                ],
+              )
+            : ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.my_location, size: 28),
+                label: const Text('INIZIA (Scansiona 10 km)', style: TextStyle(fontSize: 18)),
+                onPressed: _avviaAnalisiZona,
+              ),
       ),
     );
   }
 }
-
