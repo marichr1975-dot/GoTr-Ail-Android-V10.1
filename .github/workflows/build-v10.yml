@@ -1,4 +1,4 @@
-name: Build Android APK
+﻿name: Build V10.1 Debug APK
 
 on:
   push:
@@ -9,35 +9,45 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: GoTr_AI_9_7
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v3
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: temurin
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Setup Flutter 3.24.5
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
-          channel: 'stable'
+          channel: stable
+          cache: true
 
-      - name: Clean & Get dependencies
-        run: |
-          cd GoTr_AI_9_7
-          flutter clean
-          flutter pub get
+      - name: Flutter clean
+        run: flutter clean
 
-      - name: Build APK
-        run: |
-          cd GoTr_AI_9_7
-          flutter build apk --release --no-tree-shake-icons
+      - name: Flutter pub get
+        run: flutter pub get
 
-      - name: Upload APK Artifact
+      - name: Flutter analyze
+        continue-on-error: true
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build debug APK
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: flutter build apk --debug --no-tree-shake-icons --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: GoTr_AI_9_7/build/app/outputs/flutter-apk/app-release.apk
+          name: GoTr-Ail-V10.1-debug-apk
+          path: GoTr_AI_9_7/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
