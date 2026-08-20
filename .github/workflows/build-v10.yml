@@ -22,12 +22,14 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Install dependencies
+      - name: Clean & Get dependencies
         run: |
           cd GoTr_AI_9_7
-          flutter pub get --no-example
+          flutter clean
+          flutter pub get
 
       - name: Build APK
         run: |
